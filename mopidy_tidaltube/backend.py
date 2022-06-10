@@ -1,5 +1,5 @@
 import pykka
-from mopidy import backend, httpclient
+from mopidy import backend
 from mopidy.models import Ref
 
 from mopidy_tidaltube import Extension, logger
@@ -49,7 +49,9 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
         # extract names and uris, return a list of Refs
         if uri == "tidaltube:playlist:root":
             directoryrefs = []
-            playlist_details = self.tidal.get_tidal_playlist_details(self.backend.tidal_playlists)
+            playlist_details = self.tidal.get_tidal_playlist_details(
+                self.backend.tidal_playlists
+            )
             for playlist in playlist_details:
                 directoryrefs.append(
                     Ref.directory(

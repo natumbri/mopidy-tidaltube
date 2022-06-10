@@ -1,4 +1,3 @@
-import json
 import re
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -11,15 +10,12 @@ from mopidy_tidaltube.yt_provider import search_and_get_best_match
 
 
 class Tidal:
-
-    
     @classmethod
-    def get_tidal_user_playlists(cls, playlists):    
+    def get_tidal_user_playlists(cls, playlists):
         pass
 
     @classmethod
     def get_tidal_playlist_details(cls, playlists):
-
         def job(playlist):
             base_url = f"https://tidal.com/browse/playlist/{playlist}"
             headers = {
@@ -29,14 +25,14 @@ class Tidal:
                     "Chrome/80.0.3987.149 Safari/537.36"
                 )
             }
-            # could do this with threading and a list of all the 
+            # could do this with threading and a list of all the
             # tidal playlists
             page = requests.get(base_url, headers=headers)
             fix = page.text.replace(" */", " */ \n")
             soup = bs(fix, "html5lib")
             playlist_name = soup.find("title").text
             return {"playlist_name": playlist_name, "id": playlist}
-        
+
         results = []
 
         with ThreadPoolExecutor(4) as executor:
@@ -73,7 +69,7 @@ class Tidal:
                 .strip()
             ]
             # albumTitle is not used; could use it for cross-checking with track_dict2
-            # would also be nice to send it to mopidy-youtube, somehow, since it isn't 
+            # would also be nice to send it to mopidy-youtube, somehow, since it isn't
             # looked up when the [Ref.track] is returned by the Library backend
             # albumTitle = track.select('div[class*="track-info"]')[0].a.contents[0].strip()
             # is there any way to get isrc from tidal?
