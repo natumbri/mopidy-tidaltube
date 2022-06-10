@@ -17,12 +17,12 @@ class TidalTubeBackend(pykka.ThreadingActor, backend.Backend):
         self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
 
     def on_start(self):
-        proxy = httpclient.format_proxy(self.config["proxy"])
-        headers = {
-            "user-agent": httpclient.format_user_agent(self.user_agent),
-            "Cookie": "PREF=hl=en; CONSENT=YES+20210329;",
-            "Accept-Language": "en;q=0.8",
-        }
+        # proxy = httpclient.format_proxy(self.config["proxy"])
+        # headers = {
+        #     "user-agent": httpclient.format_user_agent(self.user_agent),
+        #     "Cookie": "PREF=hl=en; CONSENT=YES+20210329;",
+        #     "Accept-Language": "en;q=0.8",
+        # }
         self.library.tidal = Tidal()
 
 
@@ -37,7 +37,6 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
     """
 
     def browse(self, uri):
-        logger.info("browsing root")
         # if we're browsing, return a list of directories
         if uri == "tidaltube:browse":
             return [
@@ -49,16 +48,13 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
         # if we're looking at playlists, return a list of the playlists
         # extract names and uris, return a list of Refs
         if uri == "tidaltube:playlist:root":
-            logger.info("browsing playlist root")
             directoryrefs = []
-            for playlist in self.backend.tidal_playlists:
-                playlist_details = self.tidal.get_tidal_playlist_details(
-                    playlist
-                )
+            playlist_details = self.tidal.get_tidal_playlist_details(self.backend.tidal_playlists)
+            for playlist in playlist_details:
                 directoryrefs.append(
                     Ref.directory(
-                        uri=f"tidaltube:playlist:{playlist}",
-                        name=playlist_details["playlist_name"],
+                        uri=f"tidaltube:playlist:{playlist['id']}",
+                        name=playlist["playlist_name"],
                     )
                 )
             return directoryrefs
