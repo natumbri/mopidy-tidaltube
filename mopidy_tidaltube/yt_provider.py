@@ -35,8 +35,8 @@ def search_and_get_best_match(
             isrc_result = isrc_results[0]
             if isrc_result is not None and "videoId" in isrc_result:
                 return isrc_result["videoId"]
-            else:
-                logger.warn(f"No result for isrc {isrc}")
+        else:
+            logger.warn(f"No result for isrc {isrc}")
 
     song_title = _create_song_title(song_name, song_artists).lower()
 
@@ -150,10 +150,9 @@ def _order_yt_results(
         # ! difference in song duration (delta) is usually of the magnitude of a few
         # ! seconds, we need to amplify the delta if it is to have any meaningful impact
         # ! wen we calculate the avg match value
-
         if song_duration:
             delta = result["duration_seconds"] - song_duration  # ! check this
-            non_match_value = (delta ** 2) / song_duration * 100
+            non_match_value = (delta**2) / song_duration * 100
 
             time_match = 100 - non_match_value
 
@@ -162,5 +161,4 @@ def _order_yt_results(
             average_match = (artist_match + name_match) / 2
         # the results along with the avg Match
         videoIds_with_match_value[result["videoId"]] = average_match
-
     return videoIds_with_match_value

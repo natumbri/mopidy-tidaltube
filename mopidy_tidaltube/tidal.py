@@ -10,6 +10,19 @@ from mopidy_tidaltube.yt_provider import search_and_get_best_match
 
 
 class Tidal:
+    def _get_tidal_soup(url):
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 6.1) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/80.0.3987.149 Safari/537.36"
+            )
+        }
+        page = requests.get(url, headers=headers)
+        fixed_page = page.text.replace(" */", " */ \n")
+        soup = bs(fixed_page, "html5lib")
+        return soup
+
     @classmethod
     def get_tidal_user_playlists(cls, playlists):
         pass
@@ -17,25 +30,16 @@ class Tidal:
     @classmethod
     def get_tidal_playlist_details(cls, playlists):
         def job(playlist):
-            base_url = f"https://tidal.com/browse/playlist/{playlist}"
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 6.1) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/80.0.3987.149 Safari/537.36"
-                )
-            }
-            # could do this with threading and a list of all the
-            # tidal playlists
-            page = requests.get(base_url, headers=headers)
-            fix = page.text.replace(" */", " */ \n")
-            soup = bs(fix, "html5lib")
+            soup = cls._get_tidal_soup(
+                f"https://tidal.com/browse/playlist/{playlist}"
+            )
             playlist_name = soup.find("title").text
-            return {"playlist_name": playlist_name, "id": playlist}
+            return {"name": playlist_name, "id": playlist}
 
         results = []
 
-        with ThreadPoolExecutor(4) as executor:
+        # tidal uses a captcha, so hitting this hard will break it
+        with ThreadPoolExecutor(1) as executor:
             futures = executor.map(job, playlists)
             [results.append(value) for value in futures if value is not None]
 
@@ -44,17 +48,9 @@ class Tidal:
     @classmethod
     def get_tidal_playlist_tracks(cls, playlist):
         # get tracks for each playlist and translate to ytm
-        base_url = f"https://tidal.com/browse/playlist/{playlist}"
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 6.1) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/80.0.3987.149 Safari/537.36"
-            )
-        }
-        page = requests.get(base_url, headers=headers)
-        fixed_page = page.text.replace(" */", " */ \n")
-        soup = bs(fixed_page, "html5lib")
+        soup = cls._get_tidal_soup(
+            f"https://tidal.com/browse/playlist/{playlist}"
+        )
         tracks_soup = soup.find_all("div", class_="track-item has-info")
         track_dict = {}
         for index, track in enumerate(tracks_soup):
@@ -82,7 +78,7 @@ class Tidal:
 
         track_script = soup.find("script", {"data-n-head": None}).text
 
-        track_pattern = "[A-Z]\[(?P<track>\d+)\]=(?P<data>[^;]+)"
+        track_pattern = "[a-zA-Z]\[(?P<track>\d+)\]=(?P<data>[^;]+)"
         track_info_pattern = (
             "albumID\:(?P<albumId>[^,]+).*"
             'albumTitle\:"?(?P<albumTitle>[^,"]+).*'
@@ -116,11 +112,6 @@ class Tidal:
             logger.warn("track_dict length mismatch")
 
         tracks = list(track_dict.values())
-
-        # without multithreading
-        # [track.update(
-        #     {"uri": search_and_get_best_match(**track)}
-        #     ) for track in tracks]
 
         # search_and_get_best_match is slow, so with multithreading
         # but have to use a wrapper to pass a dict

@@ -48,18 +48,19 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
         # if we're looking at playlists, return a list of the playlists
         # extract names and uris, return a list of Refs
         if uri == "tidaltube:playlist:root":
-            directoryrefs = []
-            playlist_details = self.tidal.get_tidal_playlist_details(
+            playlistrefs = []
+            playlists = self.tidal.get_tidal_playlist_details(
                 self.backend.tidal_playlists
             )
-            for playlist in playlist_details:
-                directoryrefs.append(
-                    Ref.directory(
-                        uri=f"tidaltube:playlist:{playlist['id']}",
-                        name=playlist["playlist_name"],
-                    )
+            playlistrefs = [
+                Ref.directory(
+                    uri=f"tidaltube:playlist:{playlist['id']}",
+                    name=playlist["name"],
                 )
-            return directoryrefs
+                for playlist in playlists
+                if playlist["id"]
+            ]
+            return playlistrefs
 
         # if we're looking at a tidal playlist, return a list of tracks
         elif extract_playlist_id(uri):
@@ -74,5 +75,6 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
                     name=track["song_name"],
                 )
                 for track in tracks
+                if track["id"]
             ]
             return trackrefs
