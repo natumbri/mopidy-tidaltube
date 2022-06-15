@@ -64,12 +64,17 @@ class Tidal:
                 .a.contents[0]
                 .strip()
             ]
+
             # albumTitle is not used; could use it for cross-checking with track_dict2
             # would also be nice to send it to mopidy-youtube, somehow, since it isn't
             # looked up when the [Ref.track] is returned by the Library backend
-            # albumTitle = track.select('div[class*="track-info"]')[0].a.contents[0].strip()
+            # albumTitle = (
+            #     track.select('div[class*="track-info"]')[0].a.contents[0].strip()
+            # )
+
             # is there any way to get isrc from tidal?
             # isrc = ???
+
             track_dict[index] = {
                 "song_name": song_name,
                 "song_artists": song_artists,
@@ -78,26 +83,29 @@ class Tidal:
 
         track_script = soup.find("script", {"data-n-head": None}).text
 
-        track_pattern = "[a-zA-Z]\[(?P<track>\d+)\]=(?P<data>[^;]+)"
-        track_info_pattern = (
-            "albumID\:(?P<albumId>[^,]+).*"
-            'albumTitle\:"?(?P<albumTitle>[^,"]+).*'
-            "artists\:\[\{id\:(?P<artistId>[^,]+),"
-            'name\:"?(?P<artistName>[^"\}]+).*'
-            "duration\:(?P<duration>[^,]+).*"
-            'title\:"?(?P<trackTitle>[^,"]+)'
+        track_pattern = re.compile(
+            r"[a-zA-Z]\[(?P<track>\d+)\]=(?P<data>[^;]+)"
         )
 
-        matches = re.finditer(track_pattern, track_script)
+        track_info_pattern = re.compile(
+            r"albumID\:(?P<albumId>[^,]+).*"
+            r'albumTitle\:"?(?P<albumTitle>[^,"]+).*'
+            r"artists\:\[\{id\:(?P<artistId>[^,]+),"
+            r'name\:"?(?P<artistName>[^"\}]+).*'
+            r"duration\:(?P<duration>[^,]+).*"
+            r'title\:"?(?P<trackTitle>[^,"]+)'
+        )
 
-        track_dict2 = {
-            match["track"]: re.search(
-                track_info_pattern, match["data"]
-            ).groupdict()
-            for match in matches
-        }
+        matches = track_pattern.finditer(track_script)
+        if matches:
+            track_dict2 = {
+                match["track"]: track_info_pattern.search(
+                    match["data"]
+                ).groupdict()
+                for match in matches
+            }
 
-        if len(track_dict) == len(track_dict2):
+        if track_dict2 and len(track_dict) == len(track_dict2):
             for track in track_dict:
                 if "duration" in track_dict2[str(track)]:
                     try:

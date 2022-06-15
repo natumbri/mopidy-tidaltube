@@ -1,4 +1,5 @@
-# original source https://github.com/spotDL/spotify-downloader/blob/master/spotdl/providers/yt_provider.py
+# original source https://github.com/spotDL/spotify-downloader
+# spotdl/providers/yt_provider.py
 
 # ! Just for static typing
 from typing import List, Optional
@@ -97,15 +98,17 @@ def _order_yt_results(
             continue
 
         # Find artist match
-        # ! match  = (no of artist names in result) / (no. of artist names on spotify) * 100
+        # ! match  =
+        #               (no of artist names in result) /
+        #               (no. of artist names on spotify) * 100
         artist_match_number = 0
 
-        # ! we use fuzzy matching because YouTube spellings might be mucked up
-        # ! i.e if video
+        # ! we use fuzzy matching because YouTube spellings might be
+        # ! mucked up i.e if video
         for artist in song_artists:
-            # ! something like _match_percentage('rionos', 'aiobahn, rionos Motivation
-            # ! (remix)' would return 100, so we're absolutely corrent in matching
-            # ! artists to song name.
+            # ! something like _match_percentage('rionos', 'aiobahn,
+            # ! rionos Motivation(remix)' would return 100, so we're
+            # ! absolutely corrent in matching artists to song name.
             if _match_percentage(
                 str(unidecode(artist.lower())),
                 str(unidecode(result["artists"][0]["name"]).lower()),
@@ -113,8 +116,9 @@ def _order_yt_results(
             ):
                 artist_match_number += 1
 
-        # ! Skip if there are no artists in common, (else, results like 'Griffith Swank -
-        # ! Madness' will be the top match for 'Ruelle - Madness')
+        # ! Skip if there are no artists in common, (else, results like
+        # ! 'Griffith Swank -Madness' will be the top match for
+        # ! 'Ruelle - Madness')
         if artist_match_number == 0:
             continue
 
@@ -129,7 +133,8 @@ def _order_yt_results(
                     str(unidecode(result["title"].lower())),
                     60,
                 ),
-                # case where artist is author and video title is only the track name
+                # case where artist is author and video title is only
+                # the track name
                 _match_percentage(
                     str(unidecode(song_name.lower())),
                     str(unidecode(result["title"].lower())),
@@ -147,9 +152,9 @@ def _order_yt_results(
 
         # Find duration match
         # ! time match = 100 - (delta(duration)**2 / original duration * 100)
-        # ! difference in song duration (delta) is usually of the magnitude of a few
-        # ! seconds, we need to amplify the delta if it is to have any meaningful impact
-        # ! wen we calculate the avg match value
+        # ! difference in song duration (delta) is usually of the magnitude of
+        # ! a few seconds, we need to amplify the delta if it is to have any
+        # ! meaningful impact when we calculate the avg match value
         if song_duration:
             delta = result["duration_seconds"] - song_duration  # ! check this
             non_match_value = (delta**2) / song_duration * 100
@@ -159,6 +164,8 @@ def _order_yt_results(
             average_match = (artist_match + name_match + time_match) / 3
         else:
             average_match = (artist_match + name_match) / 2
+
         # the results along with the avg Match
         videoIds_with_match_value[result["videoId"]] = average_match
+
     return videoIds_with_match_value
