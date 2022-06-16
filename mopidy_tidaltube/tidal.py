@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 
 from mopidy_tidaltube import logger
-from mopidy_tidaltube.yt_provider import search_and_get_best_match
+from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 
 class Tidal:
