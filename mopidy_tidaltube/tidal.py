@@ -1,12 +1,13 @@
 import re
-from concurrent.futures.thread import ThreadPoolExecutor
 
 # from mopidy_youtube.comms import Client
 import requests
 from bs4 import BeautifulSoup as bs
+from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tidaltube import logger
-from mopidy_youtube.yt_matcher import search_and_get_best_match
+
+session = requests.Session()
 
 
 class Tidal:
@@ -18,7 +19,7 @@ class Tidal:
                 "Chrome/80.0.3987.149 Safari/537.36"
             )
         }
-        page = requests.get(url, headers=headers)
+        page = session.get(url, headers=headers)
         fixed_page = page.text.replace(" */", " */ \n")
         soup = bs(fixed_page, "html5lib")
         return soup
@@ -39,9 +40,7 @@ class Tidal:
         results = []
 
         # tidal uses a captcha, so hitting this hard will break it
-        with ThreadPoolExecutor(1) as executor:
-            futures = executor.map(job, playlists)
-            [results.append(value) for value in futures if value is not None]
+        [results.append(job(playlist)) for playlist in playlists]
 
         return results
 
@@ -121,16 +120,4 @@ class Tidal:
 
         tracks = list(track_dict.values())
 
-        # search_and_get_best_match is slow, so with multithreading
-        # but have to use a wrapper to pass a dict
-        def search_and_get_best_match_wrapper(track):
-            track.update({"id": search_and_get_best_match(**track)})
-            return track
-
-        results = []
-
-        with ThreadPoolExecutor(4) as executor:
-            futures = executor.map(search_and_get_best_match_wrapper, tracks)
-            [results.append(value) for value in futures if value is not None]
-
-        return results
+        return search_and_get_best_match(tracks)

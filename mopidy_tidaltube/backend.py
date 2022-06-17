@@ -1,4 +1,7 @@
+import json
+
 import pykka
+from cachetools import TTLCache, cached
 from mopidy import backend
 from mopidy.models import Ref
 
@@ -28,14 +31,20 @@ class TidalTubeBackend(pykka.ThreadingActor, backend.Backend):
 
 class TidalTubeLibraryProvider(backend.LibraryProvider):
 
-    root_directory = Ref.directory(uri="tidaltube:browse", name="TidalTube")
-
     """
     Called when root_directory is set to [insert description]
     When enabled makes possible to browse the playlists listed in config
     ["tidaltube"]["tidal_playlists"] and the separate tracks those playlists.
     """
 
+    root_directory = Ref.directory(uri="tidaltube:browse", name="TidalTube")
+
+    cache_max_len = 4000
+    cache_ttl = 21600
+
+    tidal_cache = TTLCache(maxsize=cache_max_len, ttl=cache_ttl)
+
+    @cached(cache=tidal_cache)
     def browse(self, uri):
         # if we're browsing, return a list of directories
         if uri == "tidaltube:browse":
@@ -46,7 +55,7 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
             ]
 
         # if we're looking at playlists, return a list of the playlists
-        # extract names and uris, return a list of Refs
+        # as directories: extract names and uris, return a list of Refs
         if uri == "tidaltube:playlist:root":
             playlistrefs = []
             playlists = self.tidal.get_tidal_playlist_details(
@@ -71,10 +80,18 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
             )
             trackrefs = [
                 Ref.track(
-                    uri=f"yt:video:{track['id']}",
-                    name=track["song_name"],
+                    uri=f"yt:video:{track['videoId']}",
+                    name=track["title"],
                 )
                 for track in tracks
-                if track["id"]
+                if "videoId" in track
             ]
+            trackrefs[0] = Ref.track(
+                uri=(
+                    f"yt:video:{tracks[0]['videoId']}"
+                    f":preload:"
+                    f"{json.dumps([track for track in tracks if track is not None])}"
+                ),
+                name=tracks[0]["title"],
+            )
             return trackrefs
