@@ -1,6 +1,7 @@
 import json
 
 import pykka
+import requests
 from cachetools import TTLCache, cached
 from mopidy import backend
 from mopidy.models import Ref
@@ -20,13 +21,8 @@ class TidalTubeBackend(pykka.ThreadingActor, backend.Backend):
         self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
 
     def on_start(self):
-        # proxy = httpclient.format_proxy(self.config["proxy"])
-        # headers = {
-        #     "user-agent": httpclient.format_user_agent(self.user_agent),
-        #     "Cookie": "PREF=hl=en; CONSENT=YES+20210329;",
-        #     "Accept-Language": "en;q=0.8",
-        # }
         self.library.tidal = Tidal()
+        self.library.tidal.session = requests.Session()
 
 
 class TidalTubeLibraryProvider(backend.LibraryProvider):
@@ -55,7 +51,7 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
             ]
 
         # if we're looking at playlists, return a list of the playlists
-        # as directories: extract names and uris, return a list of Refs
+        # as Ref.directory: extract names and uris, return a list of Refs
         if uri == "tidaltube:playlist:root":
             playlistrefs = []
             playlists = self.tidal.get_tidal_playlist_details(
@@ -86,6 +82,10 @@ class TidalTubeLibraryProvider(backend.LibraryProvider):
                 for track in tracks
                 if "videoId" in track
             ]
+
+            # include ytmusic data for all tracks as preload data in the uri 
+            # for the first track.  There is surely a better way to do this.
+            # It breaks the first track in the musicbox_webclient
             trackrefs[0] = Ref.track(
                 uri=(
                     f"yt:video:{tracks[0]['videoId']}"

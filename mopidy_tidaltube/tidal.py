@@ -1,17 +1,13 @@
 import re
 
-# from mopidy_youtube.comms import Client
-import requests
 from bs4 import BeautifulSoup as bs
 from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tidaltube import logger
 
-session = requests.Session()
-
 
 class Tidal:
-    def _get_tidal_soup(url):
+    def _get_tidal_soup(self, url):
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 6.1) "
@@ -19,19 +15,17 @@ class Tidal:
                 "Chrome/80.0.3987.149 Safari/537.36"
             )
         }
-        page = session.get(url, headers=headers)
+        page = self.session.get(url, headers=headers, timeout=20)
         fixed_page = page.text.replace(" */", " */ \n")
         soup = bs(fixed_page, "html5lib")
         return soup
 
-    @classmethod
-    def get_tidal_user_playlists(cls, playlists):
+    def get_tidal_user_playlists(self, playlists):
         pass
 
-    @classmethod
-    def get_tidal_playlist_details(cls, playlists):
+    def get_tidal_playlist_details(self, playlists):
         def job(playlist):
-            soup = cls._get_tidal_soup(
+            soup = self._get_tidal_soup(
                 f"https://tidal.com/browse/playlist/{playlist}"
             )
             playlist_name = soup.find("title").text
@@ -44,10 +38,9 @@ class Tidal:
 
         return results
 
-    @classmethod
-    def get_tidal_playlist_tracks(cls, playlist):
+    def get_tidal_playlist_tracks(self, playlist):
         # get tracks for each playlist and translate to ytm
-        soup = cls._get_tidal_soup(
+        soup = self._get_tidal_soup(
             f"https://tidal.com/browse/playlist/{playlist}"
         )
         tracks_soup = soup.find_all("div", class_="track-item has-info")
@@ -63,13 +56,6 @@ class Tidal:
                 .a.contents[0]
                 .strip()
             ]
-
-            # albumTitle is not used; could use it for cross-checking with track_dict2
-            # would also be nice to send it to mopidy-youtube, somehow, since it isn't
-            # looked up when the [Ref.track] is returned by the Library backend
-            # albumTitle = (
-            #     track.select('div[class*="track-info"]')[0].a.contents[0].strip()
-            # )
 
             # is there any way to get isrc from tidal?
             # isrc = ???
